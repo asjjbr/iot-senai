@@ -1,29 +1,17 @@
-#include <Servo.h> 
-#define SERVO 3 // Porta Digital 6 PWM
- 
-Servo s; // Variável Servo
-int pos; // Posição Servo
- 
-void setup ()
-{
-  s.attach(SERVO);
+#include <Servo.h>
+
+Servo gate;
+
+void setup() {
+  // put your setup code here, to run once:
+  gate.attach(3);
+  gate.write(90);
   Serial.begin(9600);
-  s.write(0); // Inicia motor posição zero
 }
- 
-void loop()
-{
-  for(pos = 0; pos < 90; pos++)
-  {
-    s.write(pos);
-    // delay(15);
-  }
-  
-  delay(1000);
-  
-  for(pos = 90; pos >= 0; pos--)
-  {
-    s.write(pos);
-    delay(15);
+
+void loop() {
+  // put your main code here, to run repeatedly:
+  if(Serial.available()){
+    gate.write(Serial.parseInt());
   }
 }
