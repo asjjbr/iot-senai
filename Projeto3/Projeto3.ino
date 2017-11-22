@@ -1,30 +1,21 @@
+#include <AsyncDelay.h>
+
 #define PWD "123456"
 
-#define COLUNA1 1<<8
-#define COLUNA2 1<<7
-#define COLUNA3 1<<6
-#define LINHA1 1<<5
-#define LINHA2 1<<4
-#define LINHA3 1<<3
-#define LINHA4 1<<2
-#define ONE (COLUNA1|LINHA1)
-#define TWO (COLUNA2|LINHA1)
-#define THREE (COLUNA3|LINHA1)
-#define FOUR (COLUNA1|LINHA2)
-#define FIVE (COLUNA2|LINHA2)
-#define SIX (COLUNA3|LINHA2)
-#define SEVEN (COLUNA1|LINHA3)
-#define EIGHT (COLUNA2|LINHA3)
-#define NINE (COLUNA3|LINHA3)
-#define ZERO (COLUNA2|LINHA4)
-#define STAR (COLUNA1|LINHA4)
-#define HASH (COLUNA3|LINHA4)
+#define COLUNA1 8
+#define COLUNA2 7
+#define COLUNA3 6
+#define LINHA1 5
+#define LINHA2 4
+#define LINHA3 3
+#define LINHA4 2
 
-#define KEYPAD_PINS (COLUNA1|COLUNA2|COLUNA3|LINHA1|LINHA2|LINHA3|LINHA4)
+AsyncDelay delayDebounce;
 
 unsigned int keypad = 0;
+unsigned int keypadOld = 0;
 String senha;
-String tecla;
+String tecla = "x";
 
 #define WAITING_STAR 0x00
 #define WAITING_PWD 0x01
@@ -32,7 +23,21 @@ String tecla;
 
 #define BUZZER1 9
 #define BUZZER2 10
-#define BUZZER_TIME 500
+#define BUZZER_TIME 100
+#define DEBOUNCE_TIME 50
+
+#define ONE (1<<1)
+#define TWO (1<<2)
+#define THREE (1<<3)
+#define FOUR (1<<4)
+#define FIVE (1<<5)
+#define SIX (1<<6)
+#define SEVEN (1<<7)
+#define EIGHT (1<<8)
+#define NINE (1<<9)
+#define ZERO (1<<0)
+#define STAR (1<<10)
+#define HASH (1<<11)
 
 byte stateMachine = WAITING_STAR;
 void setup() {
@@ -40,17 +45,49 @@ void setup() {
 
   pinMode(BUZZER1, OUTPUT);
   pinMode(BUZZER2, OUTPUT);
+  
+  pinMode(COLUNA1,INPUT_PULLUP);
+  pinMode(COLUNA2,INPUT_PULLUP);
+  pinMode(COLUNA3,INPUT_PULLUP);
+  pinMode(LINHA1,OUTPUT);
+  pinMode(LINHA2,OUTPUT);
+  pinMode(LINHA3,OUTPUT);
+  pinMode(LINHA4,OUTPUT);
+
+  delayDebounce.start(DEBOUNCE_TIME, AsyncDelay::MILLIS);
 }
 
+
 void loop() {
-  
-  keypad = 0;
-  for(int i=0; i<=13; i++){
-    keypad |= digitalRead(i);
+
+  if(delayDebounce.isExpired())
+    keypad = teclado();
+  else
+    keypad = keypadOld;
+    
+  if(keypad != keypadOld){
+    keypadOld = keypad;
+    delayDebounce.expire();
+    delayDebounce.repeat();
   }
-  
-  keypad = teclado();
-  keypad &= KEYPAD_PINS;
+  else{
+    keypad = 0;
+  }
+
+//  for(int i=0; i<12; i++){
+//    unsigned int aux = 0;
+//    aux = (keypad>>i)&0x01;
+//    if(aux){
+//      if(i<10)
+//        Serial.println(i);
+//      else{
+//        if(i==10)
+//          Serial.println("*");
+//        if(i==11)
+//          Serial.println("#");
+//      }
+//    }
+//  }
   
   switch(keypad){
     case ONE:
@@ -118,7 +155,9 @@ void loop() {
       break;
   }
   if(tecla != F("x"))
-    Serial.println(tecla);
+    Serial.print(tecla);
+  if(tecla == F("#"))
+    Serial.println("");
       
 
   switch(stateMachine){
@@ -163,47 +202,30 @@ void loop() {
 
 unsigned int teclado(){
   unsigned int saida = 0;
-  if (Serial.available()>0){
-    char tecla = (char)Serial.read();
-    switch(tecla){
-      case '1':
-        saida = ONE;
-        break;
-      case '2':
-        saida = TWO;
-        break;
-      case '3':
-        saida = THREE;
-        break;
-      case '4':
-        saida = FOUR;
-        break;
-      case '5':
-        saida = FIVE;
-        break;
-      case '6':
-        saida = SIX;
-        break;
-      case '7':
-        saida = SEVEN;
-        break;
-      case '8':
-        saida = EIGHT;
-        break;
-      case '9':
-        saida = NINE;
-        break;
-      case '0':
-        saida = ZERO;
-        break;
-      case '*':
-        saida = STAR;
-        break;
-      case '#':
-        saida = HASH;
-        break;
-    }
-  }
+  digitalWrite(LINHA1,LOW);
+  digitalWrite(LINHA2,HIGH);
+  digitalWrite(LINHA3,HIGH);
+  digitalWrite(LINHA4,HIGH);
+  saida |= (!digitalRead(COLUNA1)<<1)|(!digitalRead(COLUNA2)<<2)|(!digitalRead(COLUNA3)<<3);
+  
+  digitalWrite(LINHA1,HIGH);
+  digitalWrite(LINHA2,LOW);
+  digitalWrite(LINHA3,HIGH);
+  digitalWrite(LINHA4,HIGH);
+  saida |= (!digitalRead(COLUNA1)<<4)|(!digitalRead(COLUNA2)<<5)|(!digitalRead(COLUNA3)<<6);
+
+  digitalWrite(LINHA1,HIGH);
+  digitalWrite(LINHA2,HIGH);
+  digitalWrite(LINHA3,LOW);
+  digitalWrite(LINHA4,HIGH);
+  saida |= (!digitalRead(COLUNA1)<<7)|(!digitalRead(COLUNA2)<<8)|(!digitalRead(COLUNA3)<<9);
+
+  digitalWrite(LINHA1,HIGH);
+  digitalWrite(LINHA2,HIGH);
+  digitalWrite(LINHA3,HIGH);
+  digitalWrite(LINHA4,LOW);
+  saida |= (!digitalRead(COLUNA1)<<10)|(!digitalRead(COLUNA2)<<0)|(!digitalRead(COLUNA3)<<11);
+
   return saida;
 }
 
